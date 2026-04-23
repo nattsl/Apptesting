@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Sierra Amber Design System Colors - Updated to Navy Blue */
+  --color-primary: #001f3f;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #003366;
+  --color-on-primary-container: #cce0ff;
+  --color-primary-fixed: #bbdefb;
+  --color-primary-fixed-dim: #90caf9;
+  --color-on-primary-fixed: #001a35;
+  --color-on-primary-fixed-variant: #003366;
+
+  --color-secondary: #7b5826;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #ffcf92;
+  --color-on-secondary-container: #795725;
+  --color-secondary-fixed: #ffddb5;
+  --color-secondary-fixed-dim: #edbf83;
+  --color-on-secondary-fixed: #2a1800;
+  --color-on-secondary-fixed-variant: #604010;
+
+  --color-tertiary: #006491;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #33b7ff;
+  --color-on-tertiary-container: #004566;
+  --color-tertiary-fixed: #c9e6ff;
+  --color-tertiary-fixed-dim: #8aceff;
+  --color-on-tertiary-fixed: #001e2f;
+  --color-on-tertiary-fixed-variant: #004b6f;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-background: #fff8f4;
+  --color-on-background: #211a12;
+  --color-surface: #fff8f4;
+  --color-on-surface: #211a12;
+  --color-surface-variant: #efe0d2;
+  --color-on-surface-variant: #524434;
+
+  --color-surface-dim: #e6d8c9;
+  --color-surface-bright: #fff8f4;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #fff1e4;
+  --color-surface-container: #faebdd;
+  --color-surface-container-high: #f4e6d7;
+  --color-surface-container-highest: #efe0d2;
+
+  --color-outline: #857461;
+  --color-outline-variant: #d7c3ad;
+  --color-inverse-surface: #372f25;
+  --color-inverse-on-surface: #fdeee0;
+  --color-inverse-primary: #ffb955;
+
+  --radius-xl: 1.5rem;
+  --radius-lg: 1rem;
+  --radius-md: 0.75rem;
+
+  --spacing-gutter: 1rem;
+  --spacing-margin-mobile: 1.25rem;
+  --spacing-margin-desktop: 2.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-background font-sans antialiased;
+  }
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.nfc-animation-ring {
+  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping-slow {
+  75%, 100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+.scan-line {
+  animation: scan 2s ease-in-out infinite;
+}
+
+@keyframes scan {
+  0%, 100% { top: 10%; }
+  50% { top: 90%; }
+}
