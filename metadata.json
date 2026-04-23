@@ -1,6 +1,6 @@
 {
   "name": "FAST-PAY",
   "description": "Sierra Leone's most trusted digital wallet for secure personal and merchant banking.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["nfc"],
   "majorCapabilities": ["Financial management", "QR & NFC Payments", "Merchant Analytics", "Bill Payments"]
 }

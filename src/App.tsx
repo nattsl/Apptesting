@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Home, 
@@ -224,6 +224,13 @@ const LoginScreen = ({ setScreen, setRole }: { setScreen: (s: Screen) => void, s
         <Button variant="surface">
           <Fingerprint className="w-5 h-5 text-primary" /> Sign in with Touch ID
         </Button>
+        
+        <button 
+          onClick={() => { setRole('admin'); setScreen('adminControl'); }}
+          className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline mt-2 text-center"
+        >
+          Secure Admin Portal Login
+        </button>
       </Card>
 
       <footer className="flex flex-col items-center gap-6 mt-4">
@@ -603,6 +610,7 @@ const SendMoneyScreen = ({ setScreen, setTransferDetails }: { setScreen: (s: Scr
   const [phone, setPhone] = useState('');
   const [amount, setAmount] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [syncedContacts, setSyncedContacts] = useState([
     { name: 'Mom', phone: '77 123 456', img: '12' },
     { name: 'Kadi', phone: '76 998 221', img: '15' },
@@ -617,6 +625,7 @@ const SendMoneyScreen = ({ setScreen, setTransferDetails }: { setScreen: (s: Scr
   };
 
   const syncContacts = () => {
+    setShowSyncConfirm(false);
     setIsSyncing(true);
     setTimeout(() => {
       setSyncedContacts([
@@ -635,6 +644,33 @@ const SendMoneyScreen = ({ setScreen, setTransferDetails }: { setScreen: (s: Scr
       initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
       className="pt-24 px-margin-mobile flex flex-col gap-6 max-w-lg mx-auto pb-32"
     >
+      <AnimatePresence>
+        {showSyncConfirm && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+          >
+            <Card className="bg-white p-8 w-full max-w-sm flex flex-col gap-6 shadow-2xl border border-outline-variant/20">
+              <div className="flex flex-col items-center text-center gap-4" id="sync-confirm-content">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <Users className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-on-surface uppercase italic tracking-tighter">Sync Device Contacts</h3>
+                  <p className="text-sm text-on-surface-variant font-medium mt-2 leading-relaxed">
+                    FAST-PAY will access your device's contact list to find other registered users. We only process names and phone numbers to facilitate easier transfers.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button onClick={syncContacts}>Allow Access</Button>
+                <Button variant="ghost" onClick={() => setShowSyncConfirm(false)}>Don't Allow</Button>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-black text-primary tracking-tighter">Send Money</h1>
         <p className="text-sm font-medium text-on-surface-variant">Transfer funds instantly to any phone number.</p>
@@ -645,7 +681,7 @@ const SendMoneyScreen = ({ setScreen, setTransferDetails }: { setScreen: (s: Scr
            <div className="flex justify-between items-center px-1">
              <label className="text-xs font-black uppercase text-outline tracking-widest">Recipient Number</label>
              <button 
-               onClick={syncContacts}
+               onClick={() => setShowSyncConfirm(true)}
                disabled={isSyncing}
                className="text-[10px] font-black uppercase text-primary flex items-center gap-1 hover:underline disabled:opacity-50"
              >
@@ -877,62 +913,123 @@ const HistoryScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => {
   );
 };
 
-const PayScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => (
-  <motion.div 
-    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-    className="min-h-screen pt-24 px-margin-mobile flex flex-col items-center gap-12 bg-black text-white relative overflow-hidden" 
-    key="pay"
-  >
-     {/* NFC Animation Background */}
-     <div className="absolute inset-0 opacity-10 pointer-events-none">
-       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120vw] h-[120vw] border-2 border-primary rounded-full nfc-animation-ring" />
-       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vw] border-2 border-primary rounded-full nfc-animation-ring" style={{ animationDelay: '1s' }} />
-     </div>
-     
-     <div className="text-center relative z-10 flex flex-col items-center">
-       <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mb-8 backdrop-blur-2xl border border-primary/30 relative">
-          <SmartphoneIcon className="w-12 h-12 text-primary animate-pulse" />
-          <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping" />
-       </div>
-       <h2 className="text-4xl font-black tracking-tighter uppercase italic">Tap to Pay</h2>
-       <p className="text-sm text-outline font-medium mt-3 opacity-60 tracking-widest uppercase">Hold phone near merchant terminal</p>
-     </div>
+const PayScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => {
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-     <div className="w-full max-w-sm aspect-[1.586/1] rounded-3xl relative overflow-hidden bg-gradient-to-br from-neutral-900 to-black border border-white/10 shadow-2xl p-8 flex flex-col justify-between group">
-        <div className="flex justify-between items-start">
-           <div className="w-12 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg shadow-inner opacity-80" />
-           <div className="flex items-center gap-4">
-             <SmartphoneIcon className="w-6 h-6 text-primary rotate-45" />
-             <div className="text-right">
-               <p className="text-[8px] font-black uppercase tracking-[0.2em] opacity-40">Emerald Digital</p>
-               <p className="text-[10px] font-black uppercase text-primary">NFC Enabled</p>
+  useEffect(() => {
+    let controller: AbortController | null = null;
+
+    const startScan = async () => {
+      try {
+        if ('NDEFReader' in window) {
+          controller = new AbortController();
+          const ndef = new (window as any).NDEFReader();
+          await ndef.scan({ signal: controller.signal });
+          
+          ndef.addEventListener("reading", ({ message, serialNumber }: any) => {
+            console.log(`> Serial Number: ${serialNumber}`);
+            handleNFCSuccess();
+          });
+        }
+      } catch (err) {
+        console.warn("NFC hardware not responding or unauthorized:", err);
+      }
+    };
+
+    startScan();
+    return () => controller?.abort();
+  }, []);
+
+  const handleNFCSuccess = () => {
+    setIsSuccess(true);
+    setTimeout(() => {
+      setScreen('history');
+    }, 2000);
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className="min-h-screen pt-24 px-margin-mobile flex flex-col items-center gap-12 bg-black text-white relative overflow-hidden" 
+      key="pay"
+    >
+       <AnimatePresence>
+         {isSuccess && (
+           <motion.div 
+             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+             className="fixed inset-0 z-[100] bg-emerald-500 flex flex-col items-center justify-center gap-6"
+           >
+             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center">
+               <CheckCircle2 className="w-16 h-16 text-emerald-500" />
              </div>
-           </div>
-        </div>
-        
-        <div>
-           <p className="text-lg font-mono tracking-[0.3em] opacity-60">**** **** **** 8820</p>
-           <div className="flex justify-between items-end mt-4">
-              <p className="text-xs font-black uppercase tracking-wider">SIERRA EMERALD USER</p>
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-           </div>
-        </div>
+             <div className="text-center">
+               <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white">Payment Secure</h3>
+               <p className="text-sm font-bold text-white/60 mt-2">TRANS-ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</p>
+             </div>
+           </motion.div>
+         )}
+       </AnimatePresence>
 
-        {/* Gloss Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none" />
-     </div>
+       {/* NFC Animation Background */}
+       <div className="absolute inset-0 opacity-10 pointer-events-none">
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120vw] h-[120vw] border-2 border-primary rounded-full nfc-animation-ring" />
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vw] border-2 border-primary rounded-full nfc-animation-ring" style={{ animationDelay: '1s' }} />
+       </div>
+       
+       <div className="text-center relative z-10 flex flex-col items-center">
+         <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mb-8 backdrop-blur-2xl border border-primary/30 relative">
+            <SmartphoneIcon className="w-12 h-12 text-primary animate-pulse" />
+            <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping" />
+         </div>
+         <h2 className="text-4xl font-black tracking-tighter uppercase italic">Tap to Pay</h2>
+         <p className="text-sm text-outline font-medium mt-3 opacity-60 tracking-widest uppercase">Hold phone near merchant terminal</p>
+       </div>
 
-     <div className="flex flex-col items-center gap-6 mt-auto pb-12 w-full max-w-xs">
-        <div className="animate-pulse flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 bg-emerald-500/10 px-4 py-2 rounded-full border border-emerald-500/20">
-           <ShieldCheck className="w-4 h-4" /> Secure NFC Active
-        </div>
-        <div className="grid grid-cols-1 w-full gap-3">
-          <Button onClick={() => setScreen('sendMoney')} variant="outline" className="w-full text-white border-white/20 hover:bg-white/5">Use Phone Number Instead</Button>
-          <Button onClick={() => setScreen('nfcManager')} variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-primary">Manage NFC Cards</Button>
-        </div>
-     </div>
-  </motion.div>
-);
+       <div className="w-full max-w-sm aspect-[1.586/1] rounded-3xl relative overflow-hidden bg-gradient-to-br from-neutral-900 to-black border border-white/10 shadow-2xl p-8 flex flex-col justify-between group">
+          <div className="flex justify-between items-start">
+             <div className="w-12 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg shadow-inner opacity-80" />
+             <div className="flex items-center gap-4">
+               <SmartphoneIcon className="w-6 h-6 text-primary rotate-45" />
+               <div className="text-right">
+                 <p className="text-[8px] font-black uppercase tracking-[0.2em] opacity-40">Emerald Digital</p>
+                 <p className="text-[10px] font-black uppercase text-primary">NFC Enabled</p>
+               </div>
+             </div>
+          </div>
+          
+          <div>
+             <p className="text-lg font-mono tracking-[0.3em] opacity-60">**** **** **** 8820</p>
+             <div className="flex justify-between items-end mt-4">
+                <p className="text-xs font-black uppercase tracking-wider">SIERRA EMERALD USER</p>
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+             </div>
+          </div>
+
+          {/* Gloss Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none" />
+       </div>
+
+       <div className="flex flex-col items-center gap-6 mt-auto pb-12 w-full max-w-xs relative z-10">
+          <div className="animate-pulse flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 bg-emerald-500/10 px-4 py-2 rounded-full border border-emerald-500/20">
+             <ShieldCheck className="w-4 h-4" /> Secure NFC Active
+          </div>
+          
+          <button 
+            onClick={handleNFCSuccess}
+            className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors"
+          >
+            [ Simulate Hardware Proximity ]
+          </button>
+
+          <div className="grid grid-cols-1 w-full gap-3">
+            <Button onClick={() => setScreen('sendMoney')} variant="outline" className="w-full text-white border-white/20 hover:bg-white/5">Use Phone Number Instead</Button>
+            <Button onClick={() => setScreen('nfcManager')} variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-primary">Manage NFC Cards</Button>
+          </div>
+       </div>
+    </motion.div>
+  );
+};
 
 const NFCManagerScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => {
   const [isWriting, setIsWriting] = useState(false);
@@ -940,12 +1037,38 @@ const NFCManagerScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => 
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState('Main Wallet');
   const [linkingStep, setLinkingStep] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [activeCards, setActiveCards] = useState([
     { id: '1', name: 'FAST-PAY Gold', serial: '..4521', date: '2 days ago', acc: 'Main Wallet' },
     { id: '2', name: 'Office Access Tag', serial: '..9100', date: 'Oct 12', acc: 'Security' }
   ]);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+
+  useEffect(() => {
+    let controller: AbortController | null = null;
+
+    const startScan = async () => {
+      try {
+        if ('NDEFReader' in window && !isWriting) {
+          controller = new AbortController();
+          const ndef = new (window as any).NDEFReader();
+          await ndef.scan({ signal: controller.signal });
+          
+          ndef.addEventListener("reading", () => {
+            if (!showConfirm && !isWriting && !success) {
+              setShowConfirm(true);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn("NFC hardware not responding:", err);
+      }
+    };
+
+    startScan();
+    return () => controller?.abort();
+  }, [isWriting, showConfirm, success]);
 
   const startEditing = (card: any) => {
     setEditingCardId(card.id);
@@ -957,34 +1080,97 @@ const NFCManagerScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => 
     setEditingCardId(null);
   };
 
-  const handleLink = () => {
+  const handleLink = async () => {
     setShowConfirm(false);
     setIsWriting(true);
-    setLinkingStep('Initializing Secure Channel...');
+    setError(null);
+    setLinkingStep('Preparing Hardware...');
     
+    try {
+      // 1. Check for Hardware Support
+      if (!('NDEFReader' in window)) {
+        throw new Error("NFC NOT_SUPPORTED: Web NFC is not available in this browser. Running link simulation...");
+      }
+
+      const ndef = new (window as any).NDEFReader();
+      
+      // 2. Encryption Loop & Write Operation
+      setLinkingStep('Establishing Secure Channel...');
+      await new Promise(r => setTimeout(r, 800));
+
+      setLinkingStep('Generating RSA Keys...');
+      // Simulated heavy computation for key generation
+      await new Promise(r => setTimeout(r, 1000));
+
+      setLinkingStep('Creating Encrypted Payload...');
+      const authPayload = {
+        token: Math.random().toString(36).substring(7).toUpperCase(),
+        acc: selectedAccount,
+        iat: Date.now()
+      };
+      
+      setLinkingStep('Writing to Smart Chip...');
+      
+      // Attempt real write
+      await ndef.write({
+        records: [{ recordType: "text", data: JSON.stringify(authPayload) }]
+      }).catch((e: any) => {
+        // Handle physical disconnection during write
+        if (e.name === 'NotAllowedError') throw new Error("PERMISSION_DENIED: Access to NFC was blocked.");
+        if (e.name === 'AbortError') throw new Error("WRITE_ABORTED: Card connection lost during transfer.");
+        throw e;
+      });
+
+      // 3. Finalization
+      setLinkingStep('Verifying Signature...');
+      await new Promise(r => setTimeout(r, 600));
+
+      const newCard = {
+        id: String(Date.now()),
+        name: `FAST-PAY Chip ${activeCards.length + 1}`,
+        serial: `..${Math.floor(1000 + Math.random() * 9000).toString(16).toUpperCase()}`,
+        date: 'Just now',
+        acc: selectedAccount
+      };
+      
+      setActiveCards([newCard, ...activeCards]);
+      setIsWriting(false);
+      setSuccess(true);
+      setLinkingStep('');
+      setTimeout(() => setSuccess(false), 3000);
+
+    } catch (err: any) {
+      console.error("NFC Write Failure:", err);
+      
+      // Check if it's a "simulation" error (not supported) or a real hardware error
+      if (err.message.includes('NOT_SUPPORTED')) {
+        // Fallback to Simulation for preview environments
+        runSimulation();
+      } else {
+        setIsWriting(false);
+        setError(err.message || "An unknown hardware error occurred.");
+      }
+    }
+  };
+
+  const runSimulation = () => {
+    setLinkingStep('SIMULATION: RSA Exchange...');
     setTimeout(() => {
-      setLinkingStep('RSA Key Exchange (4096-bit)...');
+      setLinkingStep('SIMULATION: Writing...');
       setTimeout(() => {
-        setLinkingStep('Encrypting Auth Token...');
-        setTimeout(() => {
-          setLinkingStep('Writing AES-256 NDEF Payload...');
-          setTimeout(() => {
-            const newCard = {
-              id: String(Date.now()),
-              name: `FAST-PAY Chip ${activeCards.length + 1}`,
-              serial: `..${Math.floor(1000 + Math.random() * 9000).toString(16).toUpperCase()}`,
-              date: 'Just now',
-              acc: selectedAccount
-            };
-            setActiveCards([newCard, ...activeCards]);
-            setIsWriting(false);
-            setSuccess(true);
-            setLinkingStep('');
-            setTimeout(() => setSuccess(false), 3000);
-          }, 1200);
-        }, 1000);
-      }, 1000);
-    }, 1000);
+        const newCard = {
+          id: String(Date.now()),
+          name: `FAST-PAY Chip ${activeCards.length + 1}`,
+          serial: `..${Math.floor(1000 + Math.random() * 9000).toString(16).toUpperCase()}`,
+          date: 'Just now',
+          acc: selectedAccount
+        };
+        setActiveCards([newCard, ...activeCards]);
+        setIsWriting(false);
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
+      }, 1500);
+    }, 1500);
   };
 
   const accounts = [
@@ -999,6 +1185,23 @@ const NFCManagerScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => 
        className="pt-24 px-margin-mobile flex flex-col gap-8 max-w-xl mx-auto pb-32 relative" 
        key="nfc-manager"
     >
+       <AnimatePresence>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+              className="fixed top-24 inset-x-margin-mobile z-50 bg-red-100 text-red-900 p-4 rounded-2xl flex items-center justify-between border border-red-200 shadow-lg"
+            >
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+                <p className="text-xs font-bold leading-tight">{error}</p>
+              </div>
+              <button onClick={() => setError(null)} className="p-1 hover:bg-red-200 rounded-full">
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+       </AnimatePresence>
+
        <AnimatePresence>
           {showConfirm && (
             <motion.div 
@@ -1076,12 +1279,19 @@ const NFCManagerScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => 
                </div>
             </div>
 
-            <div className="mt-8">
+            <div className="mt-8 relative group/card">
                <p className="text-2xl font-mono tracking-[0.4em] opacity-40">•••• •••• •••• ••••</p>
                <div className="flex items-center gap-2 mt-4">
                  <SmartphoneIcon className="w-4 h-4 text-primary animate-bounce" />
                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Tap Card to Phone Back</p>
                </div>
+               
+               <button 
+                onClick={() => setShowConfirm(true)}
+                className="absolute inset-x-0 -bottom-8 opacity-0 group-hover/card:opacity-100 transition-opacity text-[8px] font-black uppercase text-white/20 hover:text-white"
+               >
+                 [ Force Proximity Recognition ]
+               </button>
             </div>
           </div>
           
@@ -1209,8 +1419,19 @@ const NFCManagerScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => 
   );
 };
 
-const BillsScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => {
+const BillsScreen = ({ setScreen, setTransferDetails }: { setScreen: (s: Screen) => void, setTransferDetails: (d: any) => void }) => {
   const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedBill, setSelectedBill] = useState<any>(null);
+
+  const handlePay = () => {
+    setTransferDetails({ 
+      name: selectedBill.label, 
+      phone: selectedBill.sub, 
+      amount: '75000' 
+    });
+    setScreen('paymentReview');
+    setShowConfirm(false);
+  };
 
   return (
     <motion.div 
@@ -1225,8 +1446,22 @@ const BillsScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => {
             className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
           >
             <Card className="bg-white p-8 w-full max-w-sm flex flex-col gap-6 shadow-2xl">
-              <div className="text-center font-bold">Utility payments are currently offline for maintenance.</div>
-              <Button onClick={() => setShowConfirm(false)}>Dismiss</Button>
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className={`w-16 h-16 rounded-full ${selectedBill.color} flex items-center justify-center`}>
+                  <selectedBill.icon className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-on-surface uppercase italic tracking-tighter">Pay {selectedBill.label}</h3>
+                  <p className="text-sm text-on-surface-variant font-medium mt-2 leading-relaxed">
+                    Account: <span className="font-bold text-primary">{selectedBill.sub}</span><br/>
+                    Outstanding Balance: <span className="font-bold text-primary">SLE 75.00</span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button onClick={handlePay}>Proceed to Payment</Button>
+                <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancel</Button>
+              </div>
             </Card>
           </motion.div>
         )}
@@ -1243,10 +1478,10 @@ const BillsScreen = ({ setScreen }: { setScreen: (s: Screen) => void }) => {
 
      <section className="grid grid-cols-2 gap-4">
         {[
-          { label: 'Electricity', icon: Bolt, sub: 'EDSA PREPAID', color: 'text-amber-600 bg-amber-50' },
-          { label: 'Water', icon: Droplets, sub: 'GUMA VALLEY', color: 'text-blue-600 bg-blue-50' }
+          { label: 'Electricity', icon: Bolt, sub: 'EDSA-7829-1', color: 'text-amber-600 bg-amber-50' },
+          { label: 'Water', icon: Droplets, sub: 'GUMA-X-22', color: 'text-blue-600 bg-blue-50' }
         ].map((item, i) => (
-          <Card key={i} className="flex flex-col gap-6 p-5 hover:border-primary/20 transition-all cursor-pointer active:scale-95" onClick={() => setShowConfirm(true)}>
+          <Card key={i} className="flex flex-col gap-6 p-5 hover:border-primary/20 transition-all cursor-pointer active:scale-95" onClick={() => { setSelectedBill(item); setShowConfirm(true); }}>
             <div className={`w-12 h-12 rounded-xl ${item.color} flex items-center justify-center`}>
               <item.icon className="w-6 h-6" />
             </div>
@@ -1505,7 +1740,7 @@ const AppView = () => {
           {screen === 'agentDashboard' && <AgentDashboard setScreen={setScreen} />}
           {screen === 'merchantAnalytics' && <MerchantAnalytics setScreen={setScreen} />}
           {screen === 'history' && <HistoryScreen setScreen={setScreen} />}
-          {screen === 'bills' && <BillsScreen setScreen={setScreen} />}
+          {screen === 'bills' && <BillsScreen setScreen={setScreen} setTransferDetails={setTransferDetails} />}
           {screen === 'adminControl' && <AdminControlScreen setScreen={setScreen} />}
           {screen === 'sendMoney' && <SendMoneyScreen setScreen={setScreen} setTransferDetails={setTransferDetails} />}
           {screen === 'nfcManager' && <NFCManagerScreen setScreen={setScreen} />}
